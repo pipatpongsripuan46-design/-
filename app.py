@@ -1,92 +1,167 @@
-# 1. ดึงเครื่องมือสร้างเว็บ (streamlit) เข้ามาในโปรแกรม
 import streamlit as st
+import time
+import plotly.graph_objects as go
 
-# 2. คำสั่งสำหรับตั้งชื่อหัวข้อใหญ่บนหน้าเว็บ
-st.title("❤ ระบบประเมิณความเสี่ยงภาวะหัวใจเต้นผิดจังหวะ")
+# 1. ตั้งค่า Layout และบังคับหน้าเว็บจำลองทรงมือถือด้วย CSS
+st.set_page_config(page_title="โปรแกรมประเมินความเสี่ยงโรคหัวใจ", layout="centered")
 
-# 3. สร้างช่องกรอกตัวเลขช่องแรก (อายุ)
-age = st.number_input(label="กรุณากรอกอายุของคุณ (ปี)" , min_value=1 , max_value=120 , value=30 )
-
-# 4. สร้างช่องกรอกตัวเลขช่อง2 (น้ำหนัก-ส่วนสูง)
-weight = st.number_input(label="กรุณากรอกน้ำหนักของคุณ (กก.)" , min_value=1.0 , max_value=200.0 , value=60.0 )
-height = st.number_input(label="กรุณากรอกส่วนสูงของคุณ (ซม.)" , min_value=50.0 , max_value=250.0 , value=165.0 )
-
-# 5. ดัชนีมวลกาย(ฺBMI)
-# 1. แปลงส่วนสูงจาก เซนติเมตร เป็น เมตร
-height_m = height / 100
-# 2. คำนวณค่า BMI ตามสูตร (เครื่องหมาย ** 2 หมายถึง ยกกำลังสอง)
-BMI = weight / (height_m ** 2)
-# 3. สั่งให้เปิดกล่องสีฟ้า (info) เพื่อโชว์ค่า BMI ที่คำนวณได้อัตโนมัติ โดยตัดทศนิยมให้เหลือ 1 ตำแหน่ง
-st.info(f"ดัชนีมวลกาย (BMI) (auto-calculate): {BMI:.1f}")
-
-# 1. ช่องกรอกความดันโลหิต (mmHg) รับเป็นตัวเลขจำนวนเต็ม
-bp = st.number_input(label="ความดันโลหิต (mmHg) *ตัวเลขบน*" , min_value=50 , max_value=200 , value=120 )
-resting_hr = st.number_input(label="อัตราการเต้นของหัวใจขณะพัก (bpm)" , min_value=30 , max_value=200 , value=75)
-family_history = st.selectbox(label="ประวัติครอบครัว (มี/ไม่มีโรคหัวใจ)" , options=[ "ไม่มี" , "มี"])
-
-# 1. สร้างปุ่ม "ประมวลผล" ถ้าผู้ใช้กดปุ่มนี้ โค้ดที่อยู่ด้านใน (ที่เยื้องเข้าไป) จะทำงาน
-if st.button(label="ประมวลผล" , use_container_width=True):
-
-#2.ตั้งต้นคะแนนความเสี่ยงไปที่ 10%
-    risk_prob = 10.0
-
-#3. เช็กเงื่อนไขอายุ: ถ้าอายุเกิน 50 ปี บวกความเสี่ยงเพิ่ม 15% / ถ้าเกิน 40 ปี บวก 5%
-    if age > 50:    
-        risk_prob += 15
-    elif age > 40:
-        risk_prob += 5
-
-#4. เช็กเงื่อนไข BMI : ถ้าอ้วน (BMI ตั้งแต่ 25 ขึ้นไป) บวกความเสี่ยงเพิ่ม 10%
-    if BMI >= 25:
-        risk_prob += 10
-
-#5. เช็กเงื่อนไขความดันโลหิต: ถ้าความดันสูง (ตั้งแต่ 140 ขึ้นไป) บวก 15% / ถ้าเริ่มสูง (ตั้งแต่ 130 ขึ้นไป) บวก 5%
-    if bp >= 140:
-        risk_prob += 15
-    elif bp >= 130:
-        risk_prob += 5
-
-#6. เช็คอัตราการเต้นหัวใจ: ถ้าเต้นเร็วเกิน 100 หรือช้ากว่า 60 ครั้ง/นาที (ผิดปกติ) บวก 15%
-    if resting_hr > 100 or resting_hr < 60:
-        risk_prob += 15
-
-#7. เช็กประวัติครอบครัว: ถ้ามีคนในครอบครัวเป็นโรคหัวใจ บวกเพิ่ม 20%
-    if family_history == "มี":
-        risk_prob += 20
-
-#8. กฏเหล็กคณิตศาสตร์: ความเสี่ยงไม่เกิน 100% (คำสั่ง min จะเลือกค่าที่น้อยที่สุด)
-        risk_prob = min(risk_prob , 100.0)
-
-#1. จัดกลุ่มเพื่อระบุข้อความระดับความเสี่ยงตามคะแนนที่คำนวณได้
-    if risk_prob < 30:
-        risk_level = "ต่ำ , (Low)"
-    elif risk_prob <= 60:
-        risk_level = "ปานกลาง , (Medium)"
-    else:
-        risk_level = "สูง , (High)"
-
-#2. แสดงตัวหนังสือสรุปผลลัพธ์บนเว็บ
-    st.write("___")
-    st.header("📊 สรุปผลการประเมิน")
-    st.metric(label="ระดับความเสี่ยงของคุณ" , value=risk_level)
-    st.markdown(f"*** โอกาสเกิดภาวะเสี่ยง: , {risk_prob:2f}%")
-
-#3. นำเข้าเครื่องมือกราฟ Plotly (เครื่องมือนี้จะแถมมากับ Streamlit อยู่แล้ว)
-    import plotly.graph_objects as go
-
-#4. วาดโครงสร้างกราฟรูปหน้าปัดเกจชี้ระดับสี
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number", # แสดงทั้งหน้าปัดและตัวเลขเปอร์เซ็นต์
-        value = risk_prob,
-        domain = {'x': [0 , 1] , 'y': [0 , 1]},
-        title = {'text': "กราฟแสดงระดับความเสี่ยง"},
-        gauge = {'axis': {'range': [None , 100]}, # หน้าปัดยาวตั้งแต่ 0 ถึง 100%
-    'steps': [
-        {'range': [0, 30], 'color': "lightgreen"}, # 0-30% สีเขียว (เสี่ยงต่ำ)
-        {'range': [30, 60], 'color': "orange"}, # 30-60% สีส้ม (เสี่ยงปานกลาง)
-        {'range': [60, 100], 'color': "red"}] # 60-100% สีแดง (เสี่ยงสูง)
+# ใส่ CSS เพื่อตกแต่งครอบหน้าเว็บให้ดูเหมือนแอปพลิเคชันมือถือ
+st.markdown("""
+    <style>
+    /* บีบหน้าจอหลักให้กว้างเท่าหน้าจอม้วถือเพื่อความสมจริง */
+    .block-container {
+        max-width: 420px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+        background-color: #ffffff;
+        border-radius: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        margin: auto;
     }
-    ))
+    /* ปรับปุ่มประมวลผลให้ดูเด่นและโค้งมนมนเหมือนแอป */
+    div.stButton > button:first-child {
+        background-color: #1abc9c;
+        color: white;
+        border-radius: 12px;
+        border: none;
+        height: 45px;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-#5. สั่งอัปโหลดกราฟขึ้นไปโชว์บนหน้าเว็บ
+st.markdown("<h2 style='text-align: center; color: #e74c3c;'>🏥 แอปประเมินโรคหัวใจ</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #7f8c8d;'>กรอกข้อมูลสุขภาพเพื่อคำนวณผ่านโมเดลคณิตศาสตร์</p>", unsafe_allow_html=True)
+
+# =================================================================
+# ส่วนรับข้อมูลอินพุต
+# =================================================================
+age = st.number_input("อายุ (ปี)", min_value=1, max_value=120, value=17)
+weight = st.number_input("น้ำหนัก (กิโลกรัม)", min_value=1.0, max_value=200.0, value=60.0, step=0.1)
+height_cm = st.number_input("ส่วนสูง (เซนติเมตร)", min_value=50.0, max_value=250.0, value=170.0, step=0.1)
+
+height_m = height_cm / 100
+bmi = weight / (height_m ** 2)
+st.write(f"💡 **ดัชนีมวลกาย (BMI) คือ:** `{bmi:.2f}`")
+
+gender = st.selectbox("เพศ", ["ชาย", "หญิง"])
+bp_sys = st.number_input("ความดันโลหิตตัวบน (mmHg)", min_value=50, max_value=250, value=120)
+hr_rest = st.number_input("อัตราการเต้นของหัวใจขณะพัก (bpm)", min_value=30, max_value=200, value=75)
+family_history = st.selectbox("มีประวัติคนในครอบครัวเป็นโรคหัวใจหรือไม่", ["ไม่มี", "มี"])
+
+# =================================================================
+# ปุ่มประมวลผลแอนิเมชัน % วิ่งโหลด และเกจวัดความเสี่ยงตัวใหญ่เด่นๆ
+# =================================================================
+if st.button(label="ประมวลผล", use_container_width=True):
+    
+    # 🌟 1. อนิเมชั่นแถบเปอร์เซ็นต์สีฟ้าค่อยๆ วิ่งโหลด (Progress Bar) แบบในรูปแอป
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for percent_complete in range(100):
+        time.sleep(0.012)  # ความเร็วโหลดนับ %
+        progress_bar.progress(percent_complete + 1)
+        status_text.markdown(f"<p style='text-align:center; color:#2980b9;'>⏳ <b>กำลังประมวลผลด้วยแบบจำลองคณิตศาสตร์... {percent_complete + 1}%</b></p>", unsafe_allow_html=True)
+        
+    status_text.empty()
+    progress_bar.empty()
+    
+    # 2. คำนวณคะแนนตามตารางเงื่อนไขโครงงาน
+    base_risk = 0.0
+    if age < 30:
+        if bmi < 18.5:            base_risk = 10.0
+        elif 18.5 <= bmi <= 22.9: base_risk = 10.0
+        elif 23.0 <= bmi <= 24.9: base_risk = 20.0
+        elif 25.0 <= bmi <= 29.9: base_risk = 35.0
+        else:                     base_risk = 50.0
+    elif 30 <= age <= 39:
+        if bmi < 18.5:            base_risk = 20.0
+        elif 18.5 <= bmi <= 22.9: base_risk = 20.0
+        elif 23.0 <= bmi <= 24.9: base_risk = 35.0
+        elif 25.0 <= bmi <= 29.9: base_risk = 50.0
+        else:                     base_risk = 65.0
+    elif 40 <= age <= 49:
+        if bmi < 18.5:            base_risk = 35.0
+        elif 18.5 <= bmi <= 22.9: base_risk = 35.0
+        elif 23.0 <= bmi <= 24.9: base_risk = 50.0
+        elif 25.0 <= bmi <= 29.9: base_risk = 65.0
+        else:                     base_risk = 80.0
+    elif 50 <= age <= 59:
+        if bmi < 18.5:            base_risk = 50.0
+        elif 18.5 <= bmi <= 22.9: base_risk = 50.0
+        elif 23.0 <= bmi <= 24.9: base_risk = 65.0
+        elif 25.0 <= bmi <= 29.9: base_risk = 80.0
+        else:                     base_risk = 90.0
+    else:
+        if bmi < 18.5:            base_risk = 65.0
+        elif 18.5 <= bmi <= 22.9: base_risk = 65.0
+        elif 23.0 <= bmi <= 24.9: base_risk = 75.0
+        elif 25.0 <= bmi <= 29.9: base_risk = 90.0
+        else:                     base_risk = 100.0
+
+    extra_risk = 0.0
+    if gender == "ชาย":           extra_risk += 5.0
+    if bp_sys >= 140:            extra_risk += 10.0
+    if hr_rest > 100:            extra_risk += 10.0
+    if family_history == "มี":     extra_risk += 10.0
+        
+    risk_prob = min(base_risk + extra_risk, 100.0)
+
+    if risk_prob <= 20:
+        risk_level = "ต่ำมาก (Very Low)"
+        gauge_color = "#2ecc71"
+        advice = "🟢 **คำแนะนำ:** สุขภาพอยู่ในเกณฑ์ดีเยี่ยม รักษาวินัยการรับประทานอาหารและการออกกำลังกายสม่ำเสมอต่อไปครับ"
+    elif risk_prob <= 40:
+        risk_level = "ต่ำ (Low)"
+        gauge_color = "#27ae60"
+        advice = "🟢 **คำแนะนำ:** มีความเสี่ยงต่ำ ควรตรวจสุขภาพประจำปีอย่างสม่ำเสมอเพื่อเฝ้าระวังพฤติกรรมเสี่ยง"
+    elif risk_prob <= 60:
+        risk_level = "ปานกลาง (Medium)"
+        gauge_color = "#f39c12"
+        advice = "🟡 **คำแนะนำ:** ความเสี่ยงระดับปานกลาง ควรเริ่มลดอาหารประเภท หวาน มัน เค็ม และออกกำลังกายต่อเนื่อง"
+    elif risk_prob <= 80:
+        risk_level = "สูง (High)"
+        gauge_color = "#d35400"
+        advice = "🟠 **คำแนะนำ:** ความเสี่ยงระดับสูง! แนะนำให้เข้าพบแพทย์เพื่อตรวจเช็กระบบหัวใจและหลอดเลือดอย่างละเอียด"
+    else:
+        risk_level = "สูงมาก (Very High)"
+        gauge_color = "#c0392b"
+        advice = "🔴 **ข้อควรระวัง:** คุณมีความเสี่ยงสูงมาก! จำเป็นต้องปรับพฤติกรรมอย่างเข้มงวดและรีบพบแพทย์เฉพาะทาง"
+
+    # แสดงผลลัพธ์ข้อมูลสรุป
+    st.markdown("<h3 style='text-align: center; color: #2c3e50;'>📊 สรุปผลการประเมิน</h3>", unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+         st.markdown(f"<p style='text-align:center; font-size:14px; margin-bottom:0;'>ระดับความเสี่ยง</p><h4 style='text-align:center; color:{gauge_color}; margin-top:0;'>{risk_level}</h4>", unsafe_allow_html=True)
+    with col2:
+         st.markdown(f"<p style='text-align:center; font-size:14px; margin-bottom:0;'>โอกาสเกิดภาวะเสี่ยง</p><h2 style='text-align:center; margin-top:0;'>{risk_prob:.0f}%</h2>", unsafe_allow_html=True)
+
+    # 🌟 3. วาดหน้าปัดเกจวัดความเสี่ยงขนาดใหญ่สะใจและเด่นชัดตามรูปตัวอย่าง
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = risk_prob,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        gauge = {
+            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#888888"},
+            'bar': {'color': gauge_color, 'thickness': 0.25},
+            'bgcolor': "white",
+            'steps': [
+                {'range': [0, 20], 'color': "#e8f8f5"},
+                {'range': [20, 40], 'color': "#eafaf1"},
+                {'range': [40, 60], 'color': "#fef9e7"},
+                {'range': [60, 80], 'color': "#fdf2e9"},
+                {'range': [80, 100], 'color': "#fdedec"}
+            ]
+        }
+    ))
+    
+    fig.update_layout(
+        font={'color': "#2c3e50", 'family': "Arial", 'size': 14},
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=280  # ปรับความสูงกราฟให้สมส่วนและสวยงามในกรอบมือถือ
+    )
+    
     st.plotly_chart(fig, use_container_width=True)
+    st.info(advice)
